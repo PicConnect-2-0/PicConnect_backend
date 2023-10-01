@@ -3,10 +3,21 @@ const router = express.Router();
 const admin = require("firebase-admin");
 
 //route is not /auth/register
-const keyData = require("../apikeys/ttp-capstone-social-media-firebase-adminsdk-ax3sl-a0111d5003.json");
 const User = require("../db/models/user");
 admin.initializeApp({
-  credential: admin.credential.cert(keyData),
+  credential: admin.credential.cert({
+    type: process.env.TYPE,
+    project_id: process.env.PROJECT_ID,
+    private_key_id: process.env.PRIVATE_KEY_ID,
+    private_key: process.env.PRIVATE_KEY.replace(/\\n/g, "\n"),
+    client_email: process.env.CLIENT_EMAIL,
+    client_id: process.env.CLIENT_ID,
+    auth_uri: process.env.AUTH_URI,
+    token_uri: process.env.TOKEN_URI,
+    auth_provider_x509_cert_url: process.env.AUTH_PROVIDER_X509_CERT_URL,
+    client_x509_cert_url: process.env.CLIENT_X509_CERT_URL,
+    universe_domain: process.env.UNIVERSE_DOMAIN,
+  })
 });
 
 router.post("/", (req, res) => {
