@@ -87,11 +87,11 @@ const startServer = async (app, server, port) => {
     socket.on("deleteComment", async (data) => {
       console.log(`deleted new comment from client: ${data}`);
       //save comment to db
-      const deleteComment = await deleteCommentFromDatabase(data);
-      console.log(`deleted reply to database: ${deleteComment}`);
+      const deleteComment = await deleteCommentFromDatabase(data.commentId);
+      console.log(`deleted comment in database: ${deleteComment}`);
       //console.log(`Saved comment: ${JSON.stringify(newComment)}`);
       //show comment to every other user in the room
-      io.to(data).emit('deleteComment', deleteComment);
+      io.to(data.roomId).emit('deleteComment', data);
     });
 
     socket.on("disconnect", () => {
