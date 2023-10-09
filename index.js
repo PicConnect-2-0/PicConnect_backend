@@ -55,8 +55,10 @@ const startServer = async (app, server, port) => {
     socket.on("newComment", async (data) => {
       console.log(`Received new comment from client: ${data}`);
       //save comment to db
-      const newComment = await saveCommentToDatabase(data.comment, data.userId, data.roomId);
-      console.log(`Saved comment to database: ${newComment}`);
+      const savedComment = await saveCommentToDatabase(data.comment, data.userId, data.roomId)
+      //console.log("comment ID", savedComment.id)
+      const newComment = await getCommentFromDatabase(savedComment.id);
+      console.log(`Saved comment to database: ${JSON.stringify(newComment, null, 2)}`);
       //console.log(`Saved comment: ${JSON.stringify(newComment)}`);
       //show comment to every other user in the room
       io.to(data.roomId).emit('newComment', newComment);
@@ -68,9 +70,9 @@ const startServer = async (app, server, port) => {
       //save comment to db
       const newReply = await saveReplyToDatabase(data.reply, data.userId, data.roomId);
       console.log(`Saved reply to database: ${newReply}`);
-      //console.log(`Saved comment: ${JSON.stringify(newComment)}`);
+      console.log(`Saved reply: ${JSON.stringify(newReply)}`);
       //show comment to every other user in the room
-      io.to(data.roomId).emit('newComment', newReply);
+      io.to(data.roomId).emit('newReply', newReply);
     });
     socket.on("deleteReply", async (data) => {
       console.log(`deleted new reply from client: ${data}`);
@@ -89,7 +91,7 @@ const startServer = async (app, server, port) => {
       console.log(`deleted reply to database: ${deleteComment}`);
       //console.log(`Saved comment: ${JSON.stringify(newComment)}`);
       //show comment to every other user in the room
-      io.to(data.roomId).emit('deleteComment', deleteComment);
+      io.to(data).emit('deleteComment', deleteComment);
     });
 
     socket.on("disconnect", () => {
@@ -139,6 +141,35 @@ async function getCommentsFromDatabase(photoId) {
     console.error(`Failed to get comments: ${error}`);
   }
 }
+async function getCommentFromDatabase(commentId) {
+  try {
+    const comment = await Comment.findByPk(commentId, {
+      include: [
+        {
+          model: User,
+          as: "user",
+        },
+        {
+          model: Reply,
+          as: "replies",
+          include: User,
+        },
+      ],
+    });
+
+    if (!comment) {
+      console.error(`Comment with id ${commentId} not found.`);
+      return null;
+    }
+
+    // console.log(`Comment fetched from database for commentId ${commentId}: ${comment}`);
+    return comment;
+  } catch (error) {
+    console.error(`Failed to get comment: ${error}`);
+    throw error;
+  }
+}
+
 
 async function saveCommentToDatabase(comment, userId, photoId) {
   try {
