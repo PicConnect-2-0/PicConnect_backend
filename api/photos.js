@@ -224,7 +224,7 @@ router.delete("/:id", async (req, res, next) => {
 
     await invalidateCache("allPhotos");
     await invalidateCache(`user:${userId}:photos`)
-    // await invalidateCache(`user:${userId}:likes`);
+    await invalidateCache(`user:${userId}:likes`);
 
     deletedPhoto
       ? res.status(200).send("Photo deleted")
@@ -264,6 +264,7 @@ router.post("/:photoId/like", async (req, res, next) => {
     await photo.save();
 
     await invalidateCache(`user:${userId}:likes`)
+    await invalidateCache(`photo:${photoId}`)
     res.status(200).json(like);
   } catch (error) {
     //console.error(`Failed to like photo ${photoId} for user ${userId}`, error);
@@ -286,9 +287,8 @@ router.delete("/:photoId/unlike", async (req, res, next) => {
     photo.likesCount -= 1;
     await photo.save();
     
-    // await invalidateCache("allPhotos");
-    // await invalidateCache(`user:${userId}:photos`);
-    await invalidateCache(`user:${userId}:likes`);
+    await invalidateCache(`user:${userId}:likes`)
+    await invalidateCache(`photo:${photoId}`)
 
     res.status(200).send("Photo unliked")
     
