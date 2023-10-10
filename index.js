@@ -66,9 +66,10 @@ const startServer = async (app, server, port) => {
 
     //new comment events
     socket.on("newReply", async (data) => {
-      console.log(`Received new reply from client: ${data}`);
+      console.log(`Received new reply from client: ${JSON.stringify(data)}`);
       //save comment to db
-      const newReply = await saveReplyToDatabase(data.reply, data.userId, data.roomId);
+      const savedReply = await saveReplyToDatabase(data.reply, data.userId, data.commentId);
+      const newReply = await getReplyFromDatabase(savedReply.id)
       console.log(`Saved reply to database: ${newReply}`);
       console.log(`Saved reply: ${JSON.stringify(newReply)}`);
       //show comment to every other user in the room
@@ -77,8 +78,8 @@ const startServer = async (app, server, port) => {
     socket.on("deleteReply", async (data) => {
       console.log(`deleted new reply from client: ${data}`);
       //save comment to db
-      const deleteReply = await deleteReplyFromDatabase(data);
-      console.log(`deleted reply to database: ${deleteReply}`);
+      const deleteReply = await deleteReplyFromDatabase(data.replyId);
+      console.log(`deleted reply to database: ${JSON.stringify(deleteReply)} with data ${JSON.stringify(data)}`);
       //console.log(`Saved comment: ${JSON.stringify(newComment)}`);
       //show comment to every other user in the room
       io.to(data.roomId).emit('deleteReply', deleteReply);
@@ -169,6 +170,29 @@ async function getCommentFromDatabase(commentId) {
     throw error;
   }
 }
+async function getReplyFromDatabase(commentId) {
+  try {
+    const reply = await Reply.findByPk(commentId, {
+      include: [
+        {
+          model: User,
+          as: "user",
+        }
+      ],
+    });
+
+    if (!reply) {
+      console.error(`Reply with id ${commentId} not found.`);
+      return null;
+    }
+
+    // console.log(`Comment fetched from database for commentId ${commentId}: ${comment}`);
+    return reply;
+  } catch (error) {
+    console.error(`Failed to get comment: ${error}`);
+    throw error;
+  }
+}
 
 
 async function saveCommentToDatabase(comment, userId, photoId) {
@@ -230,21 +254,23 @@ async function deleteCommentFromDatabase(commentId) {
 
 async function deleteReplyFromDatabase(replyId) {
   try {
-    const deletedComment = await Reply.destroy({
+    
+    const reply = await Reply.findByPk(replyId);
+    const deleteReply = await Reply.destroy( {
       where: {
         id: replyId
-      }
+      },
+      returning: true,
     });
 
-    if (deletedComment === 0) {
-      console.log(`Comment with ID ${replyId} not found.`);
-      return `Comment with ID ${replyId} not found.`;
+    if (deleteReply === 0) {
+      console.log(`reply with ID ${replyId} not found.`);
+      return `reply with ID ${replyId} not found.`;
     }
 
-    console.log(`Comment with ID ${replyId} deleted from the database.`);
-    return deletedComment;
+    console.log(`Reply with ID ${replyId} deleted from the database. ${JSON.stringify(reply.commentId)}`);
+    return reply;
   } catch (error) {
     console.error(`Failed to delete comment: ${error}`);
   }
 }
-
